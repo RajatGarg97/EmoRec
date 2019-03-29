@@ -11,10 +11,13 @@ cap = cv2.VideoCapture(0)
 
 from keras.models import model_from_json
 
+# This is a CNN model is trained on FER2013 dataset.
 model = model_from_json(open("facial_expression_model_structure.json", "r").read())
 
+# Loading model weights
 model.load_weights('facial_expression_model_weights.h5')
 
+# These 7 emotions are classified 
 emotions = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
 
 while True:
@@ -29,7 +32,8 @@ while True:
         roi_gray = gray[y : y + h, x : x + w]
         roi_color = img[y : y + h, x : x + h]
         
-        roi_gray = cv2.resize(detected_face, (48, 48))
+        #Resizing the facial image
+        roi_gray = cv2.resize(roi_gray, (48, 48))
         
         img_pixels = image.img_to_array(roi_gray)
         
