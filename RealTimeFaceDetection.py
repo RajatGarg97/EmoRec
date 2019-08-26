@@ -12,10 +12,10 @@ cap = cv2.VideoCapture(0)
 from keras.models import model_from_json
 
 # This is a CNN model is trained on FER2013 dataset.
-model = model_from_json(open("facial_expression_model_structure.json", "r").read())
+model = model_from_json(open("modelStructure.json", "r").read())
 
 # Loading model weights
-model.load_weights('facial_expression_model_weights.h5')
+model.load_weights('modelWeights.h5')
 
 # These 7 emotions are classified 
 emotions = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
