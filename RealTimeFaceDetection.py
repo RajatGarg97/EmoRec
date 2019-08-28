@@ -1,7 +1,43 @@
 import cv2
 import numpy as np
 from keras.preprocessing import image
+import os
 
+
+def get_emojis():
+    emojis_folder = 'emojis/'
+    emojis = []
+    for emoji in range(len(os.listdir(emojis_folder))):
+        emojis.append(cv2.imread(emojis_folder+str(emoji)+'.png', -1))
+    return emojis
+
+def overlay(image, emoji, x,y,w,h):
+    emoji = cv2.resize(emoji, (w, h))
+    try:
+         image[y:y+h, x:x+w] = blend_transparent(image[y:y+h, x:x+w], emoji)
+    except:
+        pass
+    return image
+
+def blend_transparent(face_img, overlay_t_img):
+    # Split out the transparency mask from the colour info
+    overlay_img = overlay_t_img[:,:,:3] # Grab the BRG planes
+    overlay_mask = overlay_t_img[:,:,3:]  # And the alpha plane
+
+    # Again calculate the inverse mask
+    background_mask = 255 - overlay_mask
+
+    # Turn the masks into three channel, so we can use them as weights
+    overlay_mask = cv2.cvtColor(overlay_mask, cv2.COLOR_GRAY2BGR)
+    background_mask = cv2.cvtColor(background_mask, cv2.COLOR_GRAY2BGR)
+
+    # Create a masked out face image, and masked out overlay
+    # We convert the images to floating point in range 0.0 - 1.0
+    face_part = (face_img * (1 / 255.0)) * (background_mask * (1 / 255.0))
+    overlay_part = (overlay_img * (1 / 255.0)) * (overlay_mask * (1 / 255.0))
+
+    # And finally just add them together, and rescale it back to an 8bit integer image
+    return np.uint8(cv2.addWeighted(face_part, 255.0, overlay_part, 255.0, 0.0))
 
 face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
 
@@ -18,7 +54,8 @@ model = model_from_json(open("modelStructure.json", "r").read())
 model.load_weights('modelWeights.h5')
 
 # These 7 emotions are classified 
-emotions = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
+#emotions = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
+emotions = get_emojis()
 
 while True:
 
@@ -45,8 +82,10 @@ while True:
         max_idx = np.argmax(pred[0])
         
         emotion = emotions[max_idx]
-        
-        cv2.putText(img, emotion, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        img = overlay(img, emotion, 400, 250, 90, 90)
+
+     #   x, y, w, h = 300, 50, 350, 350
 
      #   eyes = eye_cascade.detectMultiScale(roi_gray)
 
@@ -66,3 +105,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
