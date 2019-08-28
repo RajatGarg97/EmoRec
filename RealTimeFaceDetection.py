@@ -3,13 +3,13 @@ import numpy as np
 from keras.preprocessing import image
 import os
 
-
 def get_emojis():
     emojis_folder = 'emojis/'
     emojis = []
     for emoji in range(len(os.listdir(emojis_folder))):
         emojis.append(cv2.imread(emojis_folder+str(emoji)+'.png', -1))
     return emojis
+
 
 def overlay(image, emoji, x,y,w,h):
     emoji = cv2.resize(emoji, (w, h))
@@ -18,6 +18,7 @@ def overlay(image, emoji, x,y,w,h):
     except:
         pass
     return image
+
 
 def blend_transparent(face_img, overlay_t_img):
     # Split out the transparency mask from the colour info
@@ -39,70 +40,64 @@ def blend_transparent(face_img, overlay_t_img):
     # And finally just add them together, and rescale it back to an 8bit integer image
     return np.uint8(cv2.addWeighted(face_part, 255.0, overlay_part, 255.0, 0.0))
 
-face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
 
-# eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
+def main():
 
-cap = cv2.VideoCapture(0)
+    face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
 
-from keras.models import model_from_json
+    cap = cv2.VideoCapture(0)
 
-# This is a CNN model is trained on FER2013 dataset.
-model = model_from_json(open("modelStructure.json", "r").read())
+    from keras.models import model_from_json
 
-# Loading model weights
-model.load_weights('modelWeights.h5')
+    # This is a CNN model is trained on FER2013 dataset.
+    model = model_from_json(open("modelStructure.json", "r").read())
 
-# These 7 emotions are classified 
-#emotions = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
-emotions = get_emojis()
+    # Loading model weights
+    model.load_weights('modelWeights.h5')
 
-while True:
+    # These 7 emotions are classified 
+    #emotions = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
+    emotions = get_emojis()
 
-    ret, img = cap.read()
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    while True:
 
-    for(x, y, w, h) in faces:
+        ret, img = cap.read()
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        roi_gray = gray[y : y + h, x : x + w]
-        roi_color = img[y : y + h, x : x + h]
-        
-        #Resizing the facial image
-        roi_gray = cv2.resize(roi_gray, (48, 48))
-        
-        img_pixels = image.img_to_array(roi_gray)
-        
-        img_pixels = np.expand_dims(img_pixels, axis=0)
-        img_pixels /= 255
-        
-        pred = model.predict(img_pixels)
-        
-        max_idx = np.argmax(pred[0])
-        
-        emotion = emotions[max_idx]
+        for(x, y, w, h) in faces:
 
-        img = overlay(img, emotion, 400, 250, 90, 90)
+            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            roi_gray = gray[y : y + h, x : x + w]
+            roi_color = img[y : y + h, x : x + h]
+            
+            #Resizing the facial image
+            roi_gray = cv2.resize(roi_gray, (48, 48))
+            
+            img_pixels = image.img_to_array(roi_gray)
+            
+            img_pixels = np.expand_dims(img_pixels, axis=0)
+            img_pixels /= 255
+            
+            pred = model.predict(img_pixels)
+            
+            max_idx = np.argmax(pred[0])
+            
+            emotion = emotions[max_idx]
 
-     #   x, y, w, h = 300, 50, 350, 350
+            img = overlay(img, emotion, 400, 250, 90, 90)
 
-     #   eyes = eye_cascade.detectMultiScale(roi_gray)
+        cv2.imshow('img', img)
 
-     #   for(ex, ey, ew, eh) in eyes:
+        k = cv2.waitKey(30) & 0xff
 
-     #       cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
+        if k == 27:
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
 
 
-    
-    
-    cv2.imshow('img', img)
-
-    k = cv2.waitKey(30) & 0xff
-
-    if k == 27:
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    main()
 
